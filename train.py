@@ -1,5 +1,6 @@
 import torch
 from model import *
+from experiment import *
 
 class TrainSource():
     def __init__(
@@ -102,3 +103,52 @@ def get_optimal_B(configs, X, y):
     train_source.train(source_max_iter)
     optimal_B = train_source.model.B.detach()
     return optimal_B
+
+def experimentation(experiment_configs,
+        num_experiments=100, 
+        source_lr = 0.1,
+        target_lr = 0.01,
+        source_max_iter = 200,
+        target_max_iter = 200
+        ):
+
+    exp = Experiment(experiment_configs)
+    exp.instantiate(num_experiments)
+
+    source_X = torch.stack([t.X for t in exp.source_tasks])
+    source_y = torch.cat([t.y for t in exp.source_tasks])
+
+    experiment_configs['data'] = exp
+    experiment_configs["num_experiments"] = num_experiments
+    experiment_configs["source_lr"] = source_lr
+    experiment_configs["target_lr"] = target_lr
+    experiment_configs["source_max_iter"] = source_max_iter
+    experiment_configs["target_max_iter"] = target_max_iter
+
+    optimal_B = get_optimal_B(experiment_configs, source_X, source_y)
+    experiment_configs['B_hat'] = optimal_B
+
+    loss_list = []
+
+    print("Training target task")
+    for task in exp.target_tasks:
+        target_model = TaskPredict(experiment_configs)
+        target_optim = torch.optim.Adam(target_model.parameters(), lr=target_lr)
+        target_criterion = torch.nn.MSELoss()
+        target_X = task.X
+        target_y = task.y
+
+        print(f"Task ID: {task.task_id}")
+        train_target = TrainTarget(
+            target_model, 
+            optimal_B,
+            target_optim, 
+            target_criterion, 
+            target_X, 
+            target_y, 
+            experiment_configs)
+        train_target.train(target_max_iter)
+        loss_list.append(train_target.final_loss)
+    experiment_configs['loss'] = loss_list
+    experiment_configs['mean_loss'] = np.mean(loss_list)
+    return experiment_configs

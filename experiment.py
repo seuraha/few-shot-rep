@@ -64,7 +64,7 @@ class Experiment():
         assert 2*k <= min(d, nT), "Assumption not met: 2k <= min {d, T}"
         assert n1 > n1_bound, f"Assumption not met: n1 = {n1} >> {n1_bound: .0f} = rho^4 (d + log(T/delta))"
         assert n2 > n2_bound, f"Assumption not met: n2 = {n2} >> {n2_bound: .0f} = rho^4 (k + log(1/delta))"
-        assert c * n1 >= n2, "Assumption not met: c * n1 >= n2"
+        assert c * n1 >= n2, f"Assumption not met: c * n1 = {c*n1}>= {n2} = n2"
         print("Parameter assumptions checked")
         
     def generate_source_tasks(self, p):
@@ -144,3 +144,5 @@ class Experiment():
         simulate gaussian noise vector of length n
         """
         return torch.normal(0, sigma, size=(n,))
+    
+
