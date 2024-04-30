@@ -59,6 +59,7 @@ class TrainTarget():
         self.y = y
         self.configs = configs
         self.final_loss = None
+        self.w_hat = None
 
     def step(self):
         self.optim.zero_grad()
@@ -71,7 +72,7 @@ class TrainTarget():
     
     def train(self, max_epochs):
         epoch = 0
-        convergence_threshold = 1e-10
+        convergence_threshold = 1e-5
         prev_loss = 1e10
         loss = self.step()
         while (epoch < max_epochs) and (prev_loss > 1e-3) and (abs(loss.item() - prev_loss) > convergence_threshold):
@@ -82,6 +83,7 @@ class TrainTarget():
             epoch += 1
         print(f"\t Epoch {epoch} loss: {loss.item(): .3f}")
         self.final_loss = loss.item()
+        self.w_hat = self.model.w.weight.data.detach().squeeze()
 
 def get_optimal_B(configs, X, y):
     model = MTLDLR(configs)
@@ -129,6 +131,7 @@ def experimentation(experiment_configs,
     experiment_configs['B_hat'] = optimal_B
 
     loss_list = []
+    ER_list = []
 
     print("Training target task")
     for task in exp.target_tasks:
@@ -149,6 +152,16 @@ def experimentation(experiment_configs,
             experiment_configs)
         train_target.train(target_max_iter)
         loss_list.append(train_target.final_loss)
+        excess_risk = get_sample_excess_risk(target_X, target_y, optimal_B, train_target.w_hat)
+        ER_list.append(excess_risk)
+
     experiment_configs['loss'] = loss_list
     experiment_configs['mean_loss'] = np.mean(loss_list)
+    experiment_configs['ER'] = ER_list
     return experiment_configs
+
+def get_sample_excess_risk(X, y, B_hat, w_hat):
+    predictor = B_hat @ w_hat
+    y_hat = X @ predictor
+    excess_risk = torch.mean((y_hat - y)**2).item()
+    return excess_risk

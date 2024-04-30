@@ -58,7 +58,7 @@ class Experiment():
     def assumptions_check(self):
         configs = self.configs
         k, d, n1, n2, nT, c, delta, rho = configs.get("k"), configs.get("d"), configs.get("n1"), configs.get("n2"), configs.get("nT"), configs.get("c"), configs.get("delta"), configs.get("rho")
-        C = 100
+        C = 1.0
         n1_bound = C * rho**4 * (d + np.log(nT / delta))
         n2_bound = C * rho**4 * (k + np.log(1 / delta))
         assert 2*k <= min(d, nT), "Assumption not met: 2k <= min {d, T}"
@@ -132,6 +132,11 @@ class Experiment():
         """
         k = self.k
         ev = torch.ones(k)
+        # if self.A3 and not target_task:
+        #     ev = torch.ones(k)
+        # elif not self.A3 and not target_task:
+        #     ev = torch.linspace(1.0, 1.0*k, k)
+
         if self.A4 and target_task:
             ev /= k
         mean = torch.zeros(k)
